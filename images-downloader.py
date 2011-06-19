@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
 
-import urllib.request, sys, getopt, platform
+import urllib.request, sys, getopt, platform;
 
 class imagesDownloader:
 	__urls = '';
@@ -54,10 +54,11 @@ class imagesDownloader:
 			self.__v('Setting amount of images to download as max');
 		if self.__depth == None:
 			self.__v('Setting depth of recursive searching as max');
-		urls = args;
-		if not urls:
+		self.__urls = args;
+		if not self.__urls:
 			self.__usage();
 			sys.exit(1);
+		self.__parse();
 	
 	def __v(self, text):
 		print('[I] %s...' % text);
@@ -75,6 +76,37 @@ class imagesDownloader:
 		print('\t-r --recursive\n\t\trecursive searching in pages');
 		print('\t-d --depth\n\t\tdepth of recursion (default max)');
 		print('\t-h --help\n\t\tdisplay help');
+
+	def __getContent(self, url):
+		fh = urllib.request.urlopen(url);
+		charset = fh.info().get_content_charset();
+		if not charset:
+			charset="utf8";
+		content = fh.read().decode(charset);	
+		fh.close();
+		return content;
+
+	def __parse(self):
+		for url in self.__urls:
+			content = self.__getContent(url);
+			url=urllib.parse.urlparse(url);
+			page = "%s://%s" % (url.scheme, url.netloc);
+			print("Page: %s" % page);
+			index = 0;
+			while True:
+				index = content.find('<img src="', index);
+				if index == -1:
+					break;
+				index += 10;
+				last = content.find('"', index);
+				found = content[index:last];
+				# TODO: detect !absolute path
+				print("Found: %s" % found);
+				index = last + 1;
+				
+
+	#def __downloadImage(self, url):
+		
 
 if __name__ == '__main__':
 	try:
