@@ -15,6 +15,7 @@ class imagesDownloader:
 	__verbose = False;
 	__sep = '/';
 	__count = 0;
+	__d = 0;
 
 	def __init__(self):
 		if platform.system().lower() == 'windows':
@@ -97,7 +98,7 @@ class imagesDownloader:
 			if not os.path.exists(self.__target):
 				self.__v('Directory %s not found, trying to create' % self.__target);
 				os.mkdir(self.__target);
-			self.__v('Checking access in target directory...');
+			self.__v('Checking access in target directory');
 			if not os.access(self.__target, os.W_OK):
 				raise Exception('[E] Target directory is not writable!');
 		except OSError:
@@ -138,29 +139,27 @@ class imagesDownloader:
 				continue;
 			url=urllib.parse.urlparse(url);
 			page = "%s://%s" % (url.scheme, url.netloc);
-			index = 0;
-			while True:
-				index = content.find('src="', index);
-				if index == -1:
-					break;
-				index += 5;
-				last = content.find('"', index);
-				found = content[index:last];
-				if not found[0:7] == 'http://':
-					if found[0] != '/' and page[-1] != '/':
-						page += '/';
-					found = page + found;
-				self.__v('Found: %s' % found);
-				index = last + 1;
-				posDot = found.rfind('.');
-				ext = found[posDot + 1:];
-				name = found[found.rfind('/') + 1:posDot];
-				self.__downloadImage(found, name, ext);
-				
+			images = self.__getImages(content, page);
+			for image in images:
+				posDot = image.rfind('.');
+				ext = image[posDot + 1:];
+				self.__v('Found image: %s' % image);
+				name = image[image.rfind('/') + 1:posDot];
+				self.__downloadImage(image, name, ext);
+				if self.__recursive == True:
+					links = self.__getLinks(content, page);
+					for link in links:
+							self.__v('Found page: %s' % link);
+							self.__addUrl(link);
 
 	def __downloadImage(self, url, name, ext):
+		print('Downloading..............'+url);
 		if ext in self.__ext:
-			fh = urllib.request.urlopen(url);
+			try:
+				fh = urllib.request.urlopen(url);
+			except:
+				print('[W] Unable to download image from %s' % url);
+				return False;
 			content = fh.read();
 			if self.__name:
 				name = self.__name;
@@ -182,8 +181,50 @@ class imagesDownloader:
 					img.close();
 		else:
 			self.__v('Skipping - bad extension of image');
-		
-		
+
+	def __getImages(self, content, page):
+		images = [];
+		index = 0;
+		while True:
+			index = content.find('src="', index);
+			if index == -1:
+				break;
+			index += 5;
+			last = content.find('"', index);
+			found = content[index:last];
+			if not found[0:7] == 'http://':
+				if found[0] != '/' and page[-1] != '/':
+					page += '/';
+				found = page + found;
+			index = last + 1;
+			images.append(found);
+		return images;
+
+	def __getLinks(self, content, page):
+		links = [];
+		index = 0;
+		while True:
+			index = content.find('<a href="', index);
+			if index == -1:
+				break;
+			index += 9;
+			last = content.find('"', index);
+			found = content[index:last];
+			if not found[0:7] == 'http://':
+				if found[0] != '/' and page[-1] != '/':
+					page += '/';
+				found = page + found;
+			index = last + 1;	
+			links.append(found);
+		return links;
+
+	def __addUrl(self, url):
+		pos = url.find('#');
+		if pos != -1:
+			url = url[0:pos];
+			print(url);
+		if url not in self.__urls:
+			self.__urls.append(url);
 
 if __name__ == '__main__':
 	try:
