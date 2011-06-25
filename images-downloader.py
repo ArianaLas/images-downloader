@@ -16,6 +16,7 @@ class imagesDownloader:
 	__sep = '/';
 	__count = 0;
 	__d = 0;
+	__list = [];
 
 	def __init__(self):
 		if platform.system().lower() == 'windows':
@@ -154,33 +155,38 @@ class imagesDownloader:
 
 	def __downloadImage(self, url, name, ext):
 		print('Downloading..............'+url);
-		if ext in self.__ext:
-			try:
-				fh = urllib.request.urlopen(url);
-			except:
-				print('[W] Unable to download image from %s' % url);
-				return False;
-			content = fh.read();
-			if self.__name:
-				name = self.__name;
-			path = '%s%s.%s' % (self.__target, name, ext);
-			i = 1;
-			while os.path.exists(path):
-				path = '%s%s-%d.%s' % (self.__target, name, i, ext);
-				i += 1;
-			if int(self.__amount) == 0:
-				img = open(path, 'wb');
-				self.__v('Writing image as %s' % path);
-				img.write(content);
-				img.close();
-			if int(self.__amount) > 0 and self.__count < int(self.__amount):
+		if url not in self.__list:
+			if ext in self.__ext:
+				try:
+					fh = urllib.request.urlopen(url);
+				except:
+					print('[W] Unable to download image from %s' % url);
+					return False;
+				content = fh.read();
+				if self.__name:
+					name = self.__name;
+				path = '%s%s.%s' % (self.__target, name, ext);
+				i = 1;
+				while os.path.exists(path):
+					path = '%s%s-%d.%s' % (self.__target, name, i, ext);
+					i += 1;
+				if int(self.__amount) == 0:
+					img = open(path, 'wb');
+					self.__v('Writing image as %s' % path);
+					img.write(content);
+					img.close();
+				if int(self.__amount) > 0 and self.__count < int(self.__amount):
 					img = open(path, 'wb');
 					self.__v('Writing image as %s' % path);
 					img.write(content);
 					self.__count += 1;
 					img.close();
+				self.__list.append(url);
+
+			else:
+				self.__v('Skipping - bad extension of image');
 		else:
-			self.__v('Skipping - bad extension of image');
+			self.__v('Skipping - this image is already downloaded');
 
 	def __getImages(self, content, page):
 		images = [];
@@ -222,7 +228,6 @@ class imagesDownloader:
 		pos = url.find('#');
 		if pos != -1:
 			url = url[0:pos];
-			print(url);
 		if url not in self.__urls:
 			self.__urls.append(url);
 
